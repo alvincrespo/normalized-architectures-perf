@@ -51,9 +51,15 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_21_110541) do
     t.string "warehouse_name"
     t.string "attribute_name"
     t.string "attribute_value"
+    t.bigint "category_id", null: false
+    t.bigint "supplier_id", null: false
+    t.bigint "warehouse_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["category_id"], name: "index_items_denormalized_on_category_id"
     t.index ["id"], name: "index_items_denormalized_on_id"
+    t.index ["supplier_id"], name: "index_items_denormalized_on_supplier_id"
+    t.index ["warehouse_id"], name: "index_items_denormalized_on_warehouse_id"
   end
 
   create_table "suppliers", force: :cascade do |t|
@@ -75,4 +81,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_21_110541) do
   add_foreign_key "items", "categories"
   add_foreign_key "items", "suppliers"
   add_foreign_key "items", "warehouses"
+  add_foreign_key "items_denormalized", "categories"
+  add_foreign_key "items_denormalized", "suppliers"
+  add_foreign_key "items_denormalized", "warehouses"
 end
