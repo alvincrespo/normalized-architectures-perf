@@ -49,8 +49,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_21_110541) do
     t.string "category_name"
     t.string "supplier_name"
     t.string "warehouse_name"
-    t.string "attribute_name"
-    t.string "attribute_value"
+    t.bigint "item_id", null: false
     t.bigint "category_id", null: false
     t.bigint "supplier_id", null: false
     t.bigint "warehouse_id", null: false
@@ -58,6 +57,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_21_110541) do
     t.datetime "updated_at", null: false
     t.index ["category_id"], name: "index_items_denormalized_on_category_id"
     t.index ["id"], name: "index_items_denormalized_on_id"
+    t.index ["item_id"], name: "index_items_denormalized_on_item_id"
     t.index ["supplier_id"], name: "index_items_denormalized_on_supplier_id"
     t.index ["warehouse_id"], name: "index_items_denormalized_on_warehouse_id"
   end
@@ -82,6 +82,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_21_110541) do
   add_foreign_key "items", "suppliers"
   add_foreign_key "items", "warehouses"
   add_foreign_key "items_denormalized", "categories"
+  add_foreign_key "items_denormalized", "items"
   add_foreign_key "items_denormalized", "suppliers"
   add_foreign_key "items_denormalized", "warehouses"
 end
