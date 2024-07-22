@@ -11,74 +11,93 @@
 
 require 'faker'
 
-starting = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-puts "Creating categories."
-10.times do
-  Category.create(name: Faker::Book.genre)
+def create_records(message, &block)
+  puts "Creating #{message}."
+  starting = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+  yield if block_given?
+  ending = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+  elapsed = ending - starting
+  puts "#{message.capitalize} created. #{elapsed}"
 end
-ending = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-elapsed = ending - starting
-puts "Categories created. #{elapsed}"
 
-starting = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-puts "Creating suppliers."
-25.times do
-  Supplier.create(name: Faker::Company.name)
+puts 'Truncating database...'
+ActiveRecord::Tasks::DatabaseTasks.truncate_all
+puts 'Database truncated.'
+
+create_records('categories') do
+  10.times do
+    Category.create(name: Faker::Book.genre)
+  end
 end
-ending = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-elapsed = ending - starting
-puts "Suppliers created. #{elapsed}"
 
-starting = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-puts "Creating warehouses."
-1000.times do
-  Warehouse.create(name: Faker::Company.name, location: Faker::Address.full_address)
+create_records('suppliers') do
+  25.times do
+    Supplier.create(name: Faker::Company.name)
+  end
 end
-ending = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-elapsed = ending - starting
-puts "Warehouses created. #{elapsed}"
 
-puts "Creating Items."
-starting = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-categories = Category.all.to_a
-suppliers = Supplier.all.to_a
-warehouses = Warehouse.all.to_a
-items = 100_000.times.map do
-  {
-    name: Faker::Commerce.product_name,
-    category_id: categories.sample.id,
-    supplier_id: suppliers.sample.id,
-    warehouse_id: warehouses.sample.id
-  }
+create_records('warehouses') do
+  1000.times do
+    Warehouse.create(name: Faker::Company.name, location: Faker::Address.full_address)
+  end
 end
-ending = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-elapsed = ending - starting
-puts "Items created. #{elapsed}"
 
-puts "Batching inserting items."
-starting = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-items.each_slice(1000) do |batch|
-  Item.insert_all(batch)
+create_records('items') do
+  categories = Category.all.to_a
+  suppliers = Supplier.all.to_a
+  warehouses = Warehouse.all.to_a
+
+  items = 100_000.times.map do
+    {
+      name: Faker::Commerce.product_name,
+      category_id: categories.sample.id,
+      supplier_id: suppliers.sample.id,
+      warehouse_id: warehouses.sample.id
+    }
+  end
+
+  items.each_slice(1000) do |batch|
+    Item.insert_all(batch)
+  end
 end
-ending = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-elapsed = ending - starting
-puts "Batching completed. Items inserted. #{elapsed}"
 
-# 1_000_000.times do
-#   ItemAttribute.create(
-#     attribute_name: Faker::Lorem.word,
-#     attribute_value: Faker::Lorem.word,
-#     item: Item.all.sample
-#   )
-# end
+create_records('item attributes') do
+  items = Item.all
 
-# Item.find_each do |item|
-#   ItemsDenormalized.create(
-#     item_id: item.id,
-#     category_name: item.category.name,
-#     supplier_name: item.supplier.name,
-#     warehouse_name: item.warehouse.name,
-#     attribute_name: item.item_attribute.attribute_name,
-#     attribute_value: item.item_attribute.attribute_value
-#   )
-# end
+  item_attributes = 1_000_000.times.map do
+    {
+      attribute_name: Faker::Lorem.word,
+      attribute_value: Faker::Lorem.word,
+      item_id: items.sample.id
+    }
+  end
+
+  item_attributes.each_slice(1000) do |batch|
+    ItemAttribute.insert_all(batch)
+  end
+end
+
+create_records('denormalized items') do
+  items_with_associations = Item.includes(:category, :supplier, :warehouse)
+
+  denormalized_items_attributes = []
+
+  items_with_associations.find_each(batch_size: 1000) do |item|
+    denormalized_items_attributes << {
+      name: item.name,
+      item_id: item.id,
+      category_name: item.category.name,
+      category_id: item.category.id,
+      supplier_name: item.supplier.name,
+      supplier_id: item.supplier.id,
+      warehouse_name: item.warehouse.name,
+      warehouse_id: item.warehouse.id,
+      created_at: DateTime.now,
+      updated_at: DateTime.now
+    }
+  end
+
+  denormalized_items_attributes.each_slice(1000) do |batch|
+    ItemDenormalized.insert_all(batch)
+  end
+end
