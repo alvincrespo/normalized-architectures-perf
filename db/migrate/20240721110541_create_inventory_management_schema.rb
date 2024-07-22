@@ -51,8 +51,7 @@ class CreateInventoryManagementSchema < ActiveRecord::Migration[7.1]
       t.string :category_name
       t.string :supplier_name
       t.string :warehouse_name
-      t.string :attribute_name
-      t.string :attribute_value
+      t.references :item, null: false, foreign_key: true
       t.references :category, null: false, foreign_key: true
       t.references :supplier, null: false, foreign_key: true
       t.references :warehouse, null: false, foreign_key: true
